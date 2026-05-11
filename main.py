@@ -1,273 +1,187 @@
 import pygame
 import sys
 import os
+from classes import Botao, ItemDraggable, Game
 
 # --- CONFIGURAÇÕES INICIAIS ---
 pygame.init()
-LARGURA, ALTURA = 900, 700
+LARGURA, ALTURA = 1000, 750
 tela = pygame.display.set_mode((LARGURA, ALTURA))
-pygame.display.set_caption("Mestre das Receitas - Edição Gourmet")
+pygame.display.set_caption("Mestre das Receitas")
 relogio = pygame.time.Clock()
 
-# Cores
-BRANCO = (255, 255, 255)
-PRETO = (30, 30, 30)
-VERDE_SUCCESS = (46, 139, 87)
-AZUL_UI = (70, 130, 180)
-COR_BOTAO = (100, 100, 100)
-COR_HOVER = (150, 150, 150)
-OURO = (218, 165, 32)
-
-# Fontes
-fonte_titulo = pygame.font.SysFont("Arial", 50, bold=True)
-fonte_texto = pygame.font.SysFont("Arial", 24)
-fonte_hud = pygame.font.SysFont("Arial", 20, bold=True)
+# --- CORES ---
+BRANCO, PRETO = (255, 255, 255), (30, 30, 30)
+VERDE_SUCCESS, AZUL_UI = (46, 139, 87), (70, 130, 180)
+COR_BOTAO, OURO, VERMELHO = (100, 100, 100), (218, 165, 32), (200, 50, 50)
 
 
-# --- CLASSES (Aula 02) ---
-
-class Botao:
-    def __init__(self, texto, x, y, largura, altura, cor, acao):
-        self.texto = texto
-        self.rect = pygame.Rect(x, y, largura, altura)
-        self.cor = cor
-        self.acao = acao
-
-    def desenhar(self, surface):
-        pos_mouse = pygame.mouse.get_pos()
-        cor_final = COR_HOVER if self.rect.collidepoint(pos_mouse) else self.cor
-
-        pygame.draw.rect(surface, cor_final, self.rect, border_radius=12)
-        txt = fonte_texto.render(self.texto, True, BRANCO)
-        surface.blit(txt, (self.rect.centerx - txt.get_width() // 2, self.rect.centery - txt.get_height() // 2))
-
-    def clicou(self, evento):
-        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-            if self.rect.collidepoint(evento.pos):
-                return self.acao
-        return None
+# --- SISTEMA DE FONTES CUSTOMIZADAS ---
+def carregar_fonte(nome_arquivo, tamanho, fallback):
+    caminho = os.path.join("assets", nome_arquivo)
+    try:
+        return pygame.font.Font(caminho, tamanho)
+    except:
+        print(f"Aviso: A fonte {nome_arquivo} não foi encontrada. Usando {fallback}.")
+        return pygame.font.SysFont(fallback, tamanho)
 
 
-class Alimento:
-    def __init__(self, nome, custo, x, y, img_nome):
-        self.nome = nome
-        self.custo = custo
-        # Caminho relativo
-        caminho_img = os.path.join("assets", img_nome)
-        try:
-            self.image = pygame.image.load(caminho_img)
-            self.image = pygame.transform.scale(self.image, (80, 80))
-        except:
-            # Fallback se a imagem não existir
-            self.image = pygame.Surface((80, 80))
-            self.image.fill((200, 100, 100))
+# Carregando as fontes com tamanhos adequados
+fonte_titulo = carregar_fonte("BungeeSpice-Regular.ttf", 50, "Arial")
+fonte_livro = carregar_fonte("Sacramento-Regular.ttf", 38, "Verdana")  # Maior pq é cursiva
+fonte_texto = carregar_fonte("EBGaramond-Regular.ttf", 26, "Arial")
+fonte_hud = carregar_fonte("EBGaramond-Regular.ttf", 22, "Arial")
 
-        self.rect = self.image.get_rect(topleft=(x, y))
-        self.dragging = False
-        self.pos_inicial = (x, y)
-
-    def desenhar(self, surface):
-        surface.blit(self.image, self.rect)
-        # Mostrar preço abaixo do item
-        txt_preco = fonte_hud.render(f"R${self.custo}", True, PRETO)
-        surface.blit(txt_preco, (self.rect.centerx - txt_preco.get_width() // 2, self.rect.bottom + 5))
-
-
-# --- LÓGICA DO JOGO ---
-
-# Banco de dados de combinações
-# Usar nomes em ordem alfabética na tupla para evitar erro de ordem
-RECEITAS = {
-    tuple(sorted(["Pão", "Carne"])): "Hambúrguer",
-    tuple(sorted(["Leite", "Trigo"])): "Massa",
-    tuple(sorted(["Massa", "Tomate"])): "Pizza",
-    tuple(sorted(["Batata", "Óleo"])): "Batata Frita",
-    tuple(sorted(["Hambúrguer", "Queijo"])): "X-Cheeseburger"
-}
-
-
-class Jogo:
-    def __init__(self):
-        self.estado = "MENU"
-        self.dinheiro = 150
-        self.receitas_descobertas = []
-        self.titulo_profissional = "Estagiário"
-        self.mensagens = "Bem-vindo, Chef!"
-
-        # Ingredientes básicos que o jogador pode "comprar" arrastando
-        self.estoque = [
-            Alimento("Pão", 5, 50, 550, "pao.png"),
-            Alimento("Carne", 15, 150, 550, "carne.png"),
-            Alimento("Leite", 8, 250, 550, "leite.png"),
-            Alimento("Trigo", 5, 350, 550, "trigo.png"),
-            Alimento("Tomate", 10, 450, 550, "tomate.png"),
-            Alimento("Batata", 7, 550, 550, "batata.png"),
-            Alimento("Óleo", 12, 650, 550, "oleo.png"),
-            Alimento("Queijo", 10, 750, 550, "queijo.png")
-        ]
-
-        self.itens_na_bancada = []
-        self.item_selecionado = None
-
-    def atualizar_titulo(self):
-        qtd = len(self.receitas_descobertas)
-        if qtd >= 10:
-            self.titulo_profissional = "Mestre das Receitas (VITÓRIA!)"
-        elif qtd >= 6:
-            self.titulo_profissional = "Chef"
-        elif qtd >= 3:
-            self.titulo_profissional = "Ajudante de Cozinha"
-
-    def combinar_itens(self, item1, item2):
-        if self.dinheiro < (item1.custo + item2.custo):
-            self.mensagens = "Sem dinheiro para os ingredientes!"
-            return
-
-        self.dinheiro -= (item1.custo + item2.custo)
-        par = tuple(sorted([item1.nome, item2.nome]))
-
-        if par in RECEITAS:
-            resultado = RECEITAS[par]
-            self.mensagens = f"Sucesso! Criou: {resultado}"
-            if resultado not in self.receitas_descobertas:
-                self.receitas_descobertas.append(resultado)
-                self.dinheiro += 20  # Bónus por descoberta
-        else:
-            self.mensagens = "Essa mistura não deu em nada..."
-
-        self.atualizar_titulo()
-
-    def desenhar_hud(self):
-        pygame.draw.rect(tela, AZUL_UI, (0, 0, LARGURA, 100))
-        txt_money = fonte_titulo.render(f"R$ {self.dinheiro}", True, OURO)
-        txt_rank = fonte_hud.render(f"Cargo: {self.titulo_profissional}", True, BRANCO)
-        txt_msg = fonte_hud.render(self.mensagens, True, BRANCO)
-
-        tela.blit(txt_money, (20, 20))
-        tela.blit(txt_rank, (LARGURA - 300, 20))
-        tela.blit(txt_msg, (LARGURA // 2 - txt_msg.get_width() // 2, 70))
-
-        # Área de compras (estoque)
-        pygame.draw.rect(tela, (220, 220, 220), (0, 530, LARGURA, 170))
-        txt_instrucao = fonte_hud.render("Arraste itens do estoque para a bancada para combinar!", True, PRETO)
-        tela.blit(txt_instrucao, (LARGURA // 2 - txt_instrucao.get_width() // 2, 535))
-
-
-# --- LOOP PRINCIPAL ---
-
-jogo = Jogo()
-
-# Botões do Menu
+# --- INSTÂNCIAS ---
+game = Game()
+btn_combinar = Botao("COMBINAR", 420, 520, 150, 50, VERDE_SUCCESS, "COMBINAR")
 botoes_menu = [
-    Botao("Iniciar Jogo", 350, 250, 200, 50, VERDE_SUCCESS, "JOGANDO"),
-    Botao("Instruções", 350, 320, 200, 50, AZUL_UI, "INSTRUCOES"),
-    Botao("Créditos", 350, 390, 200, 50, COR_BOTAO, "CREDITOS"),
-    Botao("Sair", 350, 460, 200, 50, (180, 50, 50), "SAIR")
+    Botao("INICIAR", 400, 300, 200, 50, AZUL_UI, "JOGANDO"),
+    Botao("LIVRO DE RECEITAS", 400, 370, 200, 50, OURO, "LIVRO"),
+    Botao("INSTRUÇÕES", 400, 440, 200, 50, COR_BOTAO, "INSTRUCOES"),
+    Botao("CRÉDITOS", 400, 510, 200, 50, COR_BOTAO, "CREDITOS"),
+    Botao("SAIR", 400, 580, 200, 50, VERMELHO, "SAIR")
 ]
 
+# --- LOOP PRINCIPAL ---
 while True:
     tela.fill(BRANCO)
     eventos = pygame.event.get()
 
     for evento in eventos:
-        if evento.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
+        if evento.type == pygame.QUIT: pygame.quit(); sys.exit()
 
-        # Tratamento de cliques por Estado
-        if jogo.estado == "MENU":
-            for btn in botoes_menu:
-                nova_acao = btn.clicou(evento)
-                if nova_acao:
-                    if nova_acao == "SAIR": pygame.quit(); sys.exit()
-                    jogo.estado = nova_acao
+        if game.estado == "MENU":
+            for b in botoes_menu:
+                a = b.clicou(evento)
+                if a == "SAIR": pygame.quit(); sys.exit()
+                if a: game.estado = a
 
-        elif jogo.estado in ["INSTRUCOES", "CREDITOS", "LIVRO"]:
+        elif game.estado in ["INSTRUCOES", "CREDITOS", "LIVRO"]:
             if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
-                jogo.estado = "MENU"
+                game.estado = "MENU"
 
-        elif jogo.estado == "JOGANDO":
-            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
-                jogo.estado = "MENU"
+        elif game.estado == "JOGANDO":
+            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE: game.estado = "MENU"
+            if btn_combinar.clicou(evento) == "COMBINAR": game.acao_combinar()
 
-            # Lógica de Arrastar (Aula 04)
             if evento.type == pygame.MOUSEBUTTONDOWN:
-                # Tenta pegar do estoque para criar um novo item na bancada
-                for ali in jogo.estoque:
-                    if ali.rect.collidepoint(evento.pos):
-                        novo = Alimento(ali.nome, ali.custo, ali.rect.x, ali.rect.y, "")  # Simplificado
-                        novo.image = ali.image  # Copia imagem
-                        novo.dragging = True
-                        jogo.itens_na_bancada.append(novo)
-                        jogo.item_selecionado = novo
-                        break
+                # Compras na loja
+                for i, (nome, custo, img) in enumerate(game.itens_loja):
+                    if pygame.Rect(820, 110 + i * 70, 170, 60).collidepoint(evento.pos):
+                        if game.dinheiro >= custo:
+                            game.dinheiro -= custo
+                            novo = ItemDraggable(nome, custo, evento.pos[0] - 30, evento.pos[1] - 30, img)
+                            novo.dragging = True
+                            game.bancada.append(novo)
+                            game.item_selecionado = novo
+                        else:
+                            game.mensagens = "Saldo insuficiente!"
 
-                # Se não pegou no estoque, tenta mover o que já está na bancada
-                if not jogo.item_selecionado:
-                    for item in jogo.itens_na_bancada:
-                        if item.rect.collidepoint(evento.pos):
-                            item.dragging = True
-                            jogo.item_selecionado = item
-                            break
+                # Arrastar itens da bancada
+                for it in game.bancada:
+                    if it.rect.collidepoint(evento.pos):
+                        it.dragging = True
+                        game.item_selecionado = it
 
             if evento.type == pygame.MOUSEBUTTONUP:
-                if jogo.item_selecionado:
-                    jogo.item_selecionado.dragging = False
-                    # Verifica se soltou em cima de outro para combinar
-                    for outro in jogo.itens_na_bancada:
-                        if outro != jogo.item_selecionado and jogo.item_selecionado.rect.colliderect(outro.rect):
-                            jogo.combinar_itens(jogo.item_selecionado, outro)
-                            jogo.itens_na_bancada.remove(jogo.item_selecionado)
-                            jogo.itens_na_bancada.remove(outro)
-                            break
-                    jogo.item_selecionado = None
+                if game.item_selecionado:
+                    game.item_selecionado.dragging = False
+                    game.item_selecionado = None
 
-            if evento.type == pygame.MOUSEMOTION:
-                if jogo.item_selecionado:
-                    jogo.item_selecionado.rect.center = evento.pos
+            if evento.type == pygame.MOUSEMOTION and game.item_selecionado:
+                game.item_selecionado.rect.center = evento.pos
 
     # --- DESENHO DAS TELAS ---
+    if game.estado == "MENU":
+        try:
+            fundo = pygame.transform.scale(pygame.image.load(os.path.join("assets", "fundo_menu.png")),
+                                           (LARGURA, ALTURA))
+            tela.blit(fundo, (0, 0))
+        except:
+            tela.fill((220, 240, 220))  # Cor de fundo verde clara caso falte a imagem
 
-    if jogo.estado == "MENU":
-        txt_tit = fonte_titulo.render("MESTRE DAS RECEITAS", True, VERDE_SUCCESS)
-        tela.blit(txt_tit, (LARGURA // 2 - txt_tit.get_width() // 2, 100))
-        # Comandos obrigatórios no menu
-        txt_cmds = fonte_hud.render("Comandos: Use o Mouse para Arrastar os ingredientes | ESC para Menu", True, PRETO)
-        tela.blit(txt_cmds, (LARGURA // 2 - txt_cmds.get_width() // 2, 600))
-        for btn in botoes_menu: btn.desenhar(tela)
+        # Desenha o Título usando BungeeSpice
+        t_tit = fonte_titulo.render("MESTRE DAS RECEITAS", True, PRETO)
+        tela.blit(t_tit, (LARGURA // 2 - t_tit.get_width() // 2, 100))
 
-    elif jogo.estado == "INSTRUCOES":
-        tela.fill((240, 240, 240))
-        instr = [
-            "1. Arraste ingredientes do estoque (lateral) para a bancada.",
-            "2. Solte um ingrediente sobre o outro para tentar uma receita.",
-            "3. Cada tentativa consome dinheiro do seu orçamento.",
-            "4. Descubra receitas novas para subir de cargo e ganhar bônus.",
-            "5. Derrota: Se não puder mais comprar ingredientes ou R$ 0.",
-            "6. Vitória: Tornar-se um Mestre (10 receitas descobertas).",
-            "", "Pressione ESC para voltar"
-        ]
-        for i, linha in enumerate(instr):
-            t = fonte_texto.render(linha, True, PRETO)
-            tela.blit(t, (50, 100 + i * 40))
+        # Desenha os botões usando EBGaramond
+        for b in botoes_menu: b.desenhar(tela, fonte_hud)
 
-    elif jogo.estado == "CREDITOS":
-        tela.fill(PRETO)
-        cred = ["Desenvolvido por: Taciany Campos de Lima", "Disciplina: Linguagem de Programação Aplicada",
-                "Professor: Jadson de Araujo Almeida", "Assets: Flaticon / OpenGameArt / Magnific em https://www.magnific.com/", "", "ESC para voltar"]
-        for i, linha in enumerate(cred):
-            t = fonte_texto.render(linha, True, BRANCO)
-            tela.blit(t, (LARGURA // 2 - t.get_width() // 2, 200 + i * 50))
+    elif game.estado == "LIVRO":
+        try:
+            f_livro = pygame.transform.scale(pygame.image.load(os.path.join("assets", "fundo_livro.png")),
+                                             (LARGURA, ALTURA))
+            tela.blit(f_livro, (0, 0))
+        except:
+            tela.fill((245, 222, 179))
 
-    elif jogo.estado == "JOGANDO":
-        jogo.desenhar_hud()
-        for ali in jogo.estoque: ali.desenhar(tela)
-        for item in jogo.itens_na_bancada: item.desenhar(tela)
+        # Título do livro usando BungeeSpice
+        tela.blit(fonte_titulo.render("SUAS DESCOBERTAS", True, (60, 30, 0)), (50, 40))
 
-        # Condição de Derrota
-        if jogo.dinheiro <= 0 and len(jogo.itens_na_bancada) < 2:
-            txt_lose = fonte_titulo.render("FALÊNCIA! O CHEF TÁ POBRE.", True, (200, 0, 0))
-            tela.blit(txt_lose, (LARGURA // 2 - txt_lose.get_width() // 2, ALTURA // 2))
+        # Desenhando as receitas com a fonte Sacramento (cursiva)
+        for i, (nome, ing) in enumerate(game.receitas_descobertas.items()):
+            txt = fonte_livro.render(f"{nome}: feito com {ing}", True, (80, 40, 10))
+            tela.blit(txt, (70, 130 + i * 35))
+
+        tela.blit(fonte_texto.render("ESC para voltar ao menu", True, PRETO), (50, ALTURA - 50))
+
+    elif game.estado == "INSTRUCOES":
+        tela.fill(BRANCO)
+        tela.blit(fonte_titulo.render("COMO JOGAR", True, PRETO), (100, 50))
+        inst = ["1. Compre itens na LOJA (Direita) usando seu orçamento.",
+                "2. Arraste-os para o centro e clique COMBINAR.",
+                "3. Para evoluir de fase, faça 1 Principal, 1 Sobremesa e 1 Bebida.",
+                "4. Se o dinheiro acabar, você vai à falência!",
+                "", "Pressione ESC para voltar."]
+        for i, l in enumerate(inst): tela.blit(fonte_texto.render(l, True, PRETO), (100, 150 + i * 40))
+
+    elif game.estado == "CREDITOS":
+        tela.fill(BRANCO)
+        tela.blit(fonte_titulo.render("CRÉDITOS", True, PRETO), (LARGURA // 2 - 100, 80))
+        cred = ["DESENVOLVIDO POR: Taciany Campos de Lima",
+                "DISCIPLINA: Linguagem de Programação Aplicada",
+                "PROFESSOR: Jadson de Araujo Almeida",
+                "FONTES: Bungee Spice, Sacramento, EB Garamond",
+                "", "Pressione ESC para voltar."]
+        for i, l in enumerate(cred):
+            txt_cred = fonte_texto.render(l, True, PRETO)
+            tela.blit(txt_cred, (LARGURA // 2 - txt_cred.get_width() // 2, 180 + i * 50))
+
+    elif game.estado == "JOGANDO":
+        # Barra de Status Superior
+        pygame.draw.rect(tela, AZUL_UI, (0, 0, LARGURA, 100))
+        tela.blit(fonte_titulo.render(f"R$ {game.dinheiro}", True, OURO), (20, 15))
+        tela.blit(fonte_hud.render(f"Cargo: {game.titulo}", True, BRANCO), (230, 20))
+
+
+        # Lógica de cores do checklist
+        def cor_c(v):
+            return (0, 255, 0) if v else (180, 180, 180)
+
+
+        tela.blit(fonte_hud.render("MENU DA FASE:", True, BRANCO), (550, 10))
+        tela.blit(fonte_hud.render("- Principal", True, cor_c(game.fez_principal)), (550, 35))
+        tela.blit(fonte_hud.render("- Sobremesa", True, cor_c(game.fez_sobremesa)), (710, 35))
+        tela.blit(fonte_hud.render("- Bebida", True, cor_c(game.fez_bebida)), (870, 35))
+
+        # Mensagens do sistema no centro
+        txt_m = fonte_hud.render(game.mensagens, True, BRANCO)
+        tela.blit(txt_m, (LARGURA // 2 - txt_m.get_width() // 2, 70))
+
+        # Mesa de Preparo
+        pygame.draw.rect(tela, (235, 235, 235), (30, 110, 770, 610), border_radius=15)
+        btn_combinar.desenhar(tela, fonte_hud)
+        for it in game.bancada: it.desenhar(tela, fonte_hud)
+
+        # Painel da Loja
+        pygame.draw.rect(tela, (210, 210, 210), (810, 100, 190, 650))
+        for i, (nome, custo, img) in enumerate(game.itens_loja):
+            # Se não tem dinheiro, pinta o card da loja de vermelho clarinho
+            bg_loja = BRANCO if game.dinheiro >= custo else (255, 200, 200)
+            pygame.draw.rect(tela, bg_loja, (820, 110 + i * 70, 170, 60), border_radius=5)
+            tela.blit(fonte_hud.render(nome, True, PRETO), (830, 115 + i * 70))
+            tela.blit(fonte_hud.render(f"R$ {custo}", True, VERDE_SUCCESS), (830, 135 + i * 70))
 
     pygame.display.flip()
     relogio.tick(60)
