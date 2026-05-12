@@ -1,37 +1,55 @@
 import pygame
 import os
 
-# --- BANCO DE DADOS DE RECEITAS ---
+# --- BANCO DE DADOS ORGANIZADO POR FASE ---
 RECEITAS = {
-    tuple(sorted(["Pó de Café", "Água"])): {"nome": "Café", "cat": "Bebida", "img": "cafe.png"},
+    # ======= FASE 1 (Iniciante) =======
+    tuple(sorted(["Água", "Trigo"])): {"nome": "Massa", "cat": "Base", "img": "massa.png"},
+    tuple(sorted(["Água", "Tomate"])): {"nome": "Molho", "cat": "Base", "img": "molho.png"},
     tuple(sorted(["Gordura", "Carne Moída"])): {"nome": "Carne de Hambúrguer", "cat": "Base",
                                                 "img": "carne_hamburguer.png"},
-    tuple(sorted(["Água", "Trigo"])): {"nome": "Massa", "cat": "Base", "img": "massa.png"},
-    tuple(sorted(["Ovo", "Óleo"])): {"nome": "Maionese", "cat": "Base", "img": "maionese.png"},
-    tuple(sorted(["Água", "Tomate"])): {"nome": "Molho", "cat": "Base", "img": "molho.png"},
+    tuple(sorted(["Pó de Café", "Água"])): {"nome": "Café", "cat": "Bebida", "img": "cafe.png"},
     tuple(sorted(["Laranja", "Água"])): {"nome": "Suco de Laranja", "cat": "Bebida", "img": "suco.png"},
-    tuple(sorted(["Levedura", "Trigo", "Água"])): {"nome": "Pão", "cat": "Principal", "img": "pao_pronto.png"},
+    tuple(sorted(["Manteiga", "Trigo"])): {"nome": "Biscoito", "cat": "Sobremesa", "img": "biscoito.png"},
+    tuple(sorted(["Massa", "Molho", "Carne Moída"])): {"nome": "Espaguete", "cat": "Principal", "img": "espaguete.png"},
+
+    # ======= FASE 2 (Ajudante) =======
+    tuple(sorted(["Ovo", "Óleo"])): {"nome": "Maionese", "cat": "Base", "img": "maionese.png"},
+    tuple(sorted(["Leite", "Café"])): {"nome": "Pingado", "cat": "Bebida", "img": "pingado.png"},
+    tuple(sorted(["Laranja", "Trigo", "Ovo", "Açúcar"])): {"nome": "Bolo de Laranja", "cat": "Sobremesa",
+                                                           "img": "bolo.png"},
+    tuple(sorted(["Leite", "Chocolate", "Açúcar"])): {"nome": "Chocolate Quente", "cat": "Sobremesa",
+                                                      "img": "chocolate_quente.png"},
+    tuple(sorted(["Ovo", "Manteiga", "Queijo"])): {"nome": "Omelete de Queijo", "cat": "Principal",
+                                                   "img": "omelete.png"},
+
+    # ======= FASE 3 (Sous-Chef) =======
+    tuple(sorted(["Levedura", "Trigo", "Água"])): {"nome": "Pão", "cat": "Base", "img": "pao_pronto.png"},
     tuple(sorted(["Levedura", "Malte", "Lúpulo", "Água"])): {"nome": "Cerveja", "cat": "Bebida", "img": "cerveja.png"},
+    tuple(sorted(["Queijo", "Ovo", "Açúcar"])): {"nome": "Cheesecake", "cat": "Sobremesa", "img": "cheesecake.png"},
     tuple(sorted(["Pão", "Carne de Hambúrguer", "Maionese"])): {"nome": "X-Burger Gourmet", "cat": "Principal",
                                                                 "img": "xburger.png"},
-    tuple(sorted(["Massa", "Molho", "Carne Moída"])): {"nome": "Espaguete Bolonhesa", "cat": "Principal",
-                                                       "img": "espaguete.png"},
-    tuple(sorted(["Laranja", "Trigo", "Ovo"])): {"nome": "Bolo de Laranja", "cat": "Sobremesa", "img": "bolo.png"},
-    tuple(sorted(["Gordura", "Trigo", "Laranja"])): {"nome": "Torta de Laranja", "cat": "Sobremesa",
-                                                     "img": "torta.png"},
+    tuple(sorted(["Massa", "Molho", "Queijo"])): {"nome": "Pizza Marguerita", "cat": "Principal", "img": "pizza.png"},
 }
 
 ALIMENTOS_DATA = {
-    "FASE_1": [("Água", 2, "agua.png"), ("Trigo", 5, "trigo.png"), ("Gordura", 4, "gordura.png"),
-               ("Carne Moída", 12, "carne_moida.png"), ("Tomate", 6, "tomate.png"),
-               ("Laranja", 8, "laranja.png"), ("Pó de Café", 10, "po_cafe.png"), ("Manteiga", 5, "manteiga.png")],
-    "FASE_2": [("Ovo", 5, "ovo.png"), ("Óleo", 10, "oleo.png"), ("Leite", 6, "leite.png")],
-    "FASE_3": [("Levedura", 15, "levedura.png"), ("Malte", 20, "malte.png"), ("Lúpulo", 25, "lupulo.png"),
-               ("Queijo", 12, "queijo.png")]
+    "FASE_1": [
+        ("Água", 2, "agua.png"), ("Trigo", 5, "trigo.png"), ("Gordura", 4, "gordura.png"),
+        ("Carne Moída", 12, "carne_moida.png"), ("Tomate", 6, "tomate.png"),
+        ("Laranja", 8, "laranja.png"), ("Pó de Café", 10, "po_cafe.png"), ("Manteiga", 5, "manteiga.png")
+    ],
+    "FASE_2": [
+        ("Ovo", 5, "ovo.png"), ("Óleo", 10, "oleo.png"),
+        ("Leite", 7, "leite.png"), ("Açúcar", 4, "acucar.png")
+    ],
+    "FASE_3": [
+        ("Levedura", 15, "levedura.png"), ("Malte", 20, "malte.png"), ("Lúpulo", 25, "lupulo.png"),
+        ("Queijo", 12, "queijo.png"), ("Chocolate", 15, "chocolate.png")
+    ]
 }
 
 
-# --- CLASSES VISUAIS ---
+# --- CLASSES ---
 class Botao:
     def __init__(self, texto, x, y, largura, altura, cor, acao):
         self.texto = texto
@@ -68,15 +86,12 @@ class ItemDraggable:
 
     def desenhar(self, surface, fonte):
         surface.blit(self.image, self.rect)
-        # Sombra no texto do item arrastável para facilitar a leitura
         txt_sombra = fonte.render(self.nome, True, (255, 255, 255))
         surface.blit(txt_sombra, (self.rect.centerx - txt_sombra.get_width() // 2 + 1, self.rect.bottom + 3))
-
         txt = fonte.render(self.nome, True, (30, 30, 30))
         surface.blit(txt, (self.rect.centerx - txt.get_width() // 2, self.rect.bottom + 2))
 
 
-# --- CLASSE DE CONTROLE DO JOGO ---
 class Game:
     def __init__(self):
         self.estado = "MENU"
@@ -85,8 +100,8 @@ class Game:
         self.nivel = 1
         self.titulo = "Iniciante"
         self.fez_principal = self.fez_sobremesa = self.fez_bebida = False
-        self.mensagens = "Bem-vinda(o) Chef! Arraste os itens para começar."
-        self.venceu = False  # Controle da tela de vitória
+        self.mensagens = "Bem-vinda(o) Chef! Arraste itens para começar."
+        self.venceu = False
 
         self.itens_loja = []
         self.bancada = []
@@ -94,7 +109,6 @@ class Game:
         self.itens_descobertos_loja = []
         self.atualizar_estoque_loja()
 
-        # Variáveis de Animação
         self.anim_img = None
         self.anim_nome = ""
         self.anim_alpha = 0
@@ -103,12 +117,16 @@ class Game:
         self.anim_cor_texto = (46, 139, 87)
 
     def atualizar_estoque_loja(self):
-        lista = []
-        lista.extend(ALIMENTOS_DATA["FASE_1"])
-        if self.nivel >= 2: lista.extend(ALIMENTOS_DATA["FASE_2"])
-        if self.nivel >= 3: lista.extend(ALIMENTOS_DATA["FASE_3"])
-        lista.extend(self.itens_descobertos_loja)
-        self.itens_loja = lista
+        lista_bruta = []
+        lista_bruta.extend(ALIMENTOS_DATA["FASE_1"])
+        if self.nivel >= 2: lista_bruta.extend(ALIMENTOS_DATA["FASE_2"])
+        if self.nivel >= 3: lista_bruta.extend(ALIMENTOS_DATA["FASE_3"])
+        lista_bruta.extend(self.itens_descobertos_loja)
+
+        ingredientes_uteis = set()
+        for ingredientes_receita in RECEITAS.keys():
+            ingredientes_uteis.update(ingredientes_receita)
+        self.itens_loja = [item for item in lista_bruta if item[0] in ingredientes_uteis]
 
     def verificar_evolucao(self):
         checklist_ok = self.fez_principal and self.fez_sobremesa and self.fez_bebida
@@ -125,10 +143,12 @@ class Game:
         self.nivel = novo_nv
         self.titulo = novo_tit
         self.fez_principal = self.fez_sobremesa = self.fez_bebida = False
-        self.mensagens = f"PROMOÇÃO! Você agora é {novo_tit}!"
         self.atualizar_estoque_loja()
-        if self.nivel >= 4:
-            self.venceu = True  # Ativa a tela de vitória
+
+        # --- AVISO DE NOVOS ITENS DE FASE ---
+        self.mensagens = f"PROMOÇÃO! {novo_tit}! NOVOS ITENS NA LOJA!"
+
+        if self.nivel >= 4: self.venceu = True
 
     def disparar_animacao(self, nome, img_arquivo, cor_texto):
         self.anim_nome = nome
@@ -139,7 +159,6 @@ class Game:
         except:
             self.anim_img = pygame.Surface((150, 150), pygame.SRCALPHA)
             pygame.draw.circle(self.anim_img, cor_texto, (75, 75), 75)
-
         self.anim_estado = "FADE_IN"
         self.anim_alpha = 0
         self.anim_timer = 0
@@ -154,7 +173,11 @@ class Game:
 
         if chave in RECEITAS:
             res = RECEITAS[chave]
-            self.mensagens = f"SUCESSO: {res['nome']}!"
+
+            if res['nome'] in self.receitas_descobertas:
+                self.mensagens = f"Você já conhece a receita de {res['nome']}!"
+                self.bancada = []
+                return "EXISTE"
 
             self.disparar_animacao(res['nome'], res.get("img", ""), (46, 139, 87))
 
@@ -162,14 +185,24 @@ class Game:
             if res['cat'] == "Sobremesa": self.fez_sobremesa = True
             if res['cat'] == "Bebida": self.fez_bebida = True
 
-            if res['nome'] not in self.receitas_descobertas:
-                self.receitas_descobertas[res['nome']] = ", ".join(nomes_na_mesa)
-                self.dinheiro += 60
+            self.receitas_descobertas[res['nome']] = {
+                "ing": ", ".join(nomes_na_mesa),
+                "img": res.get("img", "")
+            }
 
-                custo_novo = sum(item.custo for item in self.bancada) - 1
-                novo_ingrediente = (res['nome'], custo_novo, res.get("img", ""))
-                self.itens_descobertos_loja.append(novo_ingrediente)
-                self.atualizar_estoque_loja()
+            self.dinheiro += 60
+            custo_novo = sum(item.custo for item in self.bancada) - 1
+            self.itens_descobertos_loja.append((res['nome'], custo_novo, res.get("img", "")))
+
+            # --- AVISO INTELIGENTE DE ITEM NA LOJA ---
+            tamanho_antigo_loja = len(self.itens_loja)
+            self.atualizar_estoque_loja()
+
+            if len(self.itens_loja) > tamanho_antigo_loja:
+                self.mensagens = f"DESCOBERTA: {res['nome']} (Adicionado à Loja!)"
+            else:
+                self.mensagens = f"DESCOBERTA: {res['nome']}!"
+            # -----------------------------------------
 
             self.verificar_evolucao()
             self.bancada = []
@@ -184,37 +217,25 @@ class Game:
     def atualizar_animacao(self):
         if self.anim_estado == "FADE_IN":
             self.anim_alpha += 15
-            if self.anim_alpha >= 255:
-                self.anim_alpha = 255
-                self.anim_estado = "WAIT"
+            if self.anim_alpha >= 255: self.anim_alpha = 255; self.anim_estado = "WAIT"
         elif self.anim_estado == "WAIT":
             self.anim_timer += 1
-            if self.anim_timer > 90:
-                self.anim_estado = "FADE_OUT"
+            if self.anim_timer > 90: self.anim_estado = "FADE_OUT"
         elif self.anim_estado == "FADE_OUT":
             self.anim_alpha -= 15
-            if self.anim_alpha <= 0:
-                self.anim_alpha = 0
-                self.anim_estado = None
-                self.anim_img = None
+            if self.anim_alpha <= 0: self.anim_alpha = 0; self.anim_estado = None; self.anim_img = None
 
     def desenhar_animacao(self, surface, fonte_animacao):
         if self.anim_estado and self.anim_img:
             img_animada = self.anim_img.copy()
             img_animada.set_alpha(self.anim_alpha)
-
-            # Centralizado na nova dimensão da tela (1200x800) -> X: 450, Y: 400
             rect = img_animada.get_rect(center=(450, 400))
-
             brilho = pygame.Surface((200, 200), pygame.SRCALPHA)
             pygame.draw.circle(brilho, (255, 255, 200, min(100, self.anim_alpha)), (100, 100), 100)
             surface.blit(brilho, brilho.get_rect(center=rect.center))
-
             surface.blit(img_animada, rect)
             txt = fonte_animacao.render(self.anim_nome, True, self.anim_cor_texto)
             txt.set_alpha(self.anim_alpha)
-
-            # Sombra na animação também
             txt_s = fonte_animacao.render(self.anim_nome, True, (0, 0, 0))
             txt_s.set_alpha(self.anim_alpha)
             surface.blit(txt_s, (rect.centerx - txt.get_width() // 2 + 2, rect.bottom + 12))

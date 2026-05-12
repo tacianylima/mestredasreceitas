@@ -7,7 +7,6 @@ from classes import Botao, ItemDraggable, Game
 pygame.init()
 pygame.mixer.init()
 
-# TELA AUMENTADA PARA CABER NOMES LONGOS E MAIS ITENS
 LARGURA, ALTURA = 1200, 800
 tela = pygame.display.set_mode((LARGURA, ALTURA))
 pygame.display.set_caption("Mestre das Receitas")
@@ -36,21 +35,20 @@ def carregar_som(nome_arquivo):
         return None
 
 
-# Cache inteligente de imagens para não pesar o PC recarregando toda hora
 cache_imagens = {}
 
 
-def get_imagem_cache(nome_arquivo, tamanho):
-    chave = (nome_arquivo, tamanho)
-    if chave not in cache_imagens:
+def get_icone(nome_arquivo, tamanho):
+    if (nome_arquivo, tamanho) not in cache_imagens:
         try:
             img = pygame.transform.scale(pygame.image.load(os.path.join("assets", nome_arquivo)).convert_alpha(),
                                          tamanho)
         except:
-            img = pygame.Surface(tamanho, pygame.SRCALPHA)
-            pygame.draw.circle(img, (218, 165, 32), (tamanho[0] // 2, tamanho[1] // 2), tamanho[0] // 2)
-        cache_imagens[chave] = img
-    return cache_imagens[chave]
+            img = pygame.Surface(tamanho, pygame.SRCALPHA); pygame.draw.circle(img, OURO,
+                                                                               (tamanho[0] // 2, tamanho[1] // 2),
+                                                                               tamanho[0] // 2)
+        cache_imagens[(nome_arquivo, tamanho)] = img
+    return cache_imagens[(nome_arquivo, tamanho)]
 
 
 # Fontes
@@ -60,13 +58,13 @@ fonte_texto = carregar_fonte("DynaPuff_Condensed-Regular.ttf", 26, "Arial")
 fonte_hud = carregar_fonte("DynaPuff_Condensed-Regular.ttf", 20, "Arial")
 fonte_mensagem = carregar_fonte("DynaPuff_Condensed-Regular.ttf", 36, "Arial")
 
-# SFX
+# SFX e Músicas
 sfx_pegar = carregar_som("pickup.wav")
 sfx_soltar = carregar_som("drop.wav")
 sfx_combinar = carregar_som("combine.wav")
 sfx_sucesso = carregar_som("success.wav")
 sfx_erro = carregar_som("error.wav")
-sfx_vitoria = carregar_som("victory.wav")  # Opcional: Um som de vitória!
+sfx_vitoria = carregar_som("victory.wav")
 
 musica_atual = ""
 
@@ -76,31 +74,26 @@ def tocar_musica(estado):
     if estado in ["MENU", "LIVRO", "INSTRUCOES", "CREDITOS"] and musica_atual != "MENU":
         musica_atual = "MENU"
         try:
-            pygame.mixer.music.load(os.path.join("assets", "menu_bgm.mp3"))
-            pygame.mixer.music.set_volume(0.3)
-            pygame.mixer.music.play(-1)
+            pygame.mixer.music.load(os.path.join("assets", "menu_bgm.mp3")); pygame.mixer.music.set_volume(
+                0.3); pygame.mixer.music.play(-1)
         except:
             pass
     elif estado == "JOGANDO" and musica_atual != "JOGANDO":
         musica_atual = "JOGANDO"
         try:
-            pygame.mixer.music.load(os.path.join("assets", "game_bgm.mp3"))
-            pygame.mixer.music.set_volume(0.2)
-            pygame.mixer.music.play(-1)
+            pygame.mixer.music.load(os.path.join("assets", "game_bgm.mp3")); pygame.mixer.music.set_volume(
+                0.2); pygame.mixer.music.play(-1)
         except:
             pass
     elif estado == "VITORIA":
-        pygame.mixer.music.stop()
-        musica_atual = "VITORIA"
+        pygame.mixer.music.stop(); musica_atual = "VITORIA"
 
 
 # --- INSTÂNCIAS E LAYOUT ---
 game = Game()
-
-# Centralizando elementos para a tela maior (1200 de largura)
 btn_combinar = Botao("COMBINAR", 325, 710, 250, 60, VERDE_SUCCESS, "COMBINAR")
-
 centro_x = LARGURA // 2
+
 botoes_menu = [
     Botao("INICIAR", centro_x - 125, 280, 250, 55, AZUL_UI, "JOGANDO"),
     Botao("LIVRO DE RECEITAS", centro_x - 125, 360, 250, 55, OURO, "LIVRO"),
@@ -111,7 +104,6 @@ botoes_menu = [
 
 btn_voltar_vitoria = Botao("VOLTAR AO MENU", centro_x - 150, 600, 300, 60, AZUL_UI, "MENU")
 
-# Nova Área (Aumentada para caber imagens e textos grandes na loja)
 rect_bancada = pygame.Rect(30, 140, 850, 630)
 rect_loja = pygame.Rect(900, 140, 280, 630)
 scroll_loja = 0
@@ -134,7 +126,7 @@ while True:
                 scroll_loja = max(limite, min(0, scroll_loja))
             elif game.estado == "LIVRO":
                 scroll_livro += evento.y * 30
-                limite = min(0, 550 - (len(game.receitas_descobertas) * 45))
+                limite = min(0, 550 - (len(game.receitas_descobertas) * 60))
                 scroll_livro = max(limite, min(0, scroll_livro))
 
         # --- EVENTOS POR ESTADO ---
@@ -150,16 +142,14 @@ while True:
 
         elif game.estado == "VITORIA":
             tocar_musica("VITORIA")
-            a = btn_voltar_vitoria.clicou(evento)
-            if a == "MENU":
-                game = Game()  # Reseta o jogo inteiro!
+            if btn_voltar_vitoria.clicou(evento) == "MENU":
+                game = Game()
                 scroll_loja = 0
                 game.estado = "MENU"
 
         elif game.estado == "JOGANDO":
             tocar_musica("JOGANDO")
 
-            # Condição de Vitória (Gatilho ativado no classes.py)
             if game.venceu:
                 if sfx_vitoria: sfx_vitoria.play()
                 game.estado = "VITORIA"
@@ -179,7 +169,7 @@ while True:
                 # Compras
                 for i, (nome, custo, img) in enumerate(game.itens_loja):
                     y_pos = 150 + i * 85 + scroll_loja
-                    r_item = pygame.Rect(910, y_pos, 260, 75)  # Retângulo maior
+                    r_item = pygame.Rect(910, y_pos, 260, 75)
                     if r_item.collidepoint(evento.pos) and rect_loja.collidepoint(evento.pos) and evento.pos[1] > 140:
                         if game.dinheiro >= custo:
                             game.dinheiro -= custo
@@ -235,7 +225,7 @@ while True:
         tela.blit(txt_cmds, (centro_x - txt_cmds.get_width() // 2, ALTURA - 35))
 
     elif game.estado == "VITORIA":
-        tela.fill((255, 248, 220))  # Fundo bege comemorativo
+        tela.fill((255, 248, 220))
 
         t_vit = fonte_titulo.render("VOCE VENCEU!", True, OURO)
         tela.blit(t_vit, (centro_x - t_vit.get_width() // 2, 150))
@@ -257,9 +247,17 @@ while True:
         tela.blit(t_liv, (centro_x - t_liv.get_width() // 2, 30))
 
         tela.set_clip(pygame.Rect(50, 150, 1100, 600))
-        for i, (nome, ing) in enumerate(game.receitas_descobertas.items()):
-            txt = fonte_livro.render(f"• {nome}: feito com {ing}", True, (80, 40, 10))
-            tela.blit(txt, (80, 160 + i * 45 + scroll_livro))
+
+        # Desenhando o livro com imagens!
+        for i, (nome, info) in enumerate(game.receitas_descobertas.items()):
+            y_pos = 160 + i * 60 + scroll_livro
+            if info["img"]:
+                img_receita = get_icone(info["img"], (45, 45))
+                tela.blit(img_receita, (80, y_pos))
+
+            txt = fonte_livro.render(f"{nome}: feito com {info['ing']}", True, (80, 40, 10))
+            tela.blit(txt, (140, y_pos + 5))
+
         tela.set_clip(None)
         tela.blit(fonte_texto.render("ESC para voltar", True, PRETO), (50, ALTURA - 50))
 
@@ -289,7 +287,6 @@ while True:
             tela.blit(fonte_texto.render(l, True, PRETO), (100, 200 + i * 45))
 
     elif game.estado == "JOGANDO":
-        # Cabeçalho maior e mais bonito
         pygame.draw.rect(tela, AZUL_UI, (0, 0, LARGURA, 130))
 
         tela.blit(fonte_texto.render(f"R$ {game.dinheiro}", True, OURO), (40, 20))
@@ -305,16 +302,14 @@ while True:
         tela.blit(fonte_hud.render("Sobremesa", True, cor_c(game.fez_sobremesa)), (700, 55))
         tela.blit(fonte_hud.render("Bebida", True, cor_c(game.fez_bebida)), (850, 55))
 
-        # Mensagem com Sombra para destacar do fundo!
-        cor_msg = VERDE_SUCCESS if "SUCESSO" in game.mensagens else (
+        # Texto Central Sombreado
+        cor_msg = VERDE_SUCCESS if "SUCESSO" in game.mensagens or "conhece" in game.mensagens else (
             VERMELHO if "nada" in game.mensagens or "Errada" in game.mensagens else BRANCO)
-
         txt_sombra = fonte_mensagem.render(game.mensagens, True, PRETO)
         txt_m = fonte_mensagem.render(game.mensagens, True, cor_msg)
-
         pos_msg_x = centro_x - txt_m.get_width() // 2
-        tela.blit(txt_sombra, (pos_msg_x + 2, 85 + 2))  # Desenha a sombra 2 pixels pro lado
-        tela.blit(txt_m, (pos_msg_x, 85))  # Desenha o texto colorido em cima
+        tela.blit(txt_sombra, (pos_msg_x + 2, 85 + 2))
+        tela.blit(txt_m, (pos_msg_x, 85))
 
         # Painéis
         pygame.draw.rect(tela, (235, 235, 235), rect_bancada, border_radius=15)
@@ -332,14 +327,9 @@ while True:
             bg_l = BRANCO if game.dinheiro >= custo else (255, 200, 200)
             y_pos = 150 + i * 85 + scroll_loja
 
-            # Caixa do Item
             pygame.draw.rect(tela, bg_l, (910, y_pos, 260, 75), border_radius=8)
-
-            # Imagem do Item
-            icone = get_imagem_cache(img_nome, (55, 55))
+            icone = get_icone(img_nome, (55, 55))
             tela.blit(icone, (920, y_pos + 10))
-
-            # Textos
             tela.blit(fonte_hud.render(nome, True, PRETO), (985, y_pos + 12))
             tela.blit(fonte_hud.render(f"R$ {custo}", True, VERDE_SUCCESS), (985, y_pos + 40))
         tela.set_clip(None)
