@@ -27,9 +27,9 @@ RECEITAS = {
     tuple(sorted(["Levedura", "Trigo", "Água"])): {"nome": "Pão", "cat": "Base", "img": "pao_pronto.png"},
     tuple(sorted(["Levedura", "Malte", "Lúpulo", "Água"])): {"nome": "Cerveja", "cat": "Bebida", "img": "cerveja.png"},
     tuple(sorted(["Queijo", "Ovo", "Açúcar"])): {"nome": "Cheesecake", "cat": "Sobremesa", "img": "cheesecake.png"},
-    tuple(sorted(["Pão", "Carne de Hambúrguer", "Maionese"])): {"nome": "X-Burger Gourmet", "cat": "Principal",
+    tuple(sorted(["Pão", "Carne de Hambúrguer", "Maionese", "Queijo"])): {"nome": "X-Burger", "cat": "Principal",
                                                                 "img": "xburger.png"},
-    tuple(sorted(["Massa", "Molho", "Queijo"])): {"nome": "Pizza Marguerita", "cat": "Principal", "img": "pizza.png"},
+    tuple(sorted(["Massa", "Molho", "Queijo"])): {"nome": "Pizza", "cat": "Principal", "img": "pizza.png"},
 }
 
 ALIMENTOS_DATA = {
@@ -40,11 +40,11 @@ ALIMENTOS_DATA = {
     ],
     "FASE_2": [
         ("Ovo", 5, "ovo.png"), ("Óleo", 10, "oleo.png"),
-        ("Leite", 7, "leite.png"), ("Açúcar", 4, "acucar.png")
+        ("Leite", 7, "leite.png"), ("Açúcar", 4, "acucar.png"),
+        ("Queijo", 12, "queijo.png")
     ],
     "FASE_3": [
-        ("Levedura", 15, "levedura.png"), ("Malte", 20, "malte.png"), ("Lúpulo", 25, "lupulo.png"),
-        ("Queijo", 12, "queijo.png"), ("Chocolate", 15, "chocolate.png")
+        ("Levedura", 15, "levedura.png"), ("Malte", 20, "malte.png"), ("Lúpulo", 25, "lupulo.png"), ("Chocolate", 15, "chocolate.png")
     ]
 }
 
@@ -146,7 +146,7 @@ class Game:
         self.atualizar_estoque_loja()
 
         # --- AVISO DE NOVOS ITENS DE FASE ---
-        self.mensagens = f"PROMOÇÃO! {novo_tit}! NOVOS ITENS NA LOJA!"
+        self.mensagens = f"SUBIU DE NÍVEL! AGORA VOCÊ É {novo_tit}. NOVOS ITENS NA LOJA!"
 
         if self.nivel >= 4: self.venceu = True
 
@@ -175,7 +175,7 @@ class Game:
             res = RECEITAS[chave]
 
             if res['nome'] in self.receitas_descobertas:
-                self.mensagens = f"Você já conhece a receita de {res['nome']}!"
+                self.mensagens = f"Você já descobriu a receita de {res['nome']}!"
                 self.bancada = []
                 return "EXISTE"
 
@@ -210,7 +210,7 @@ class Game:
         else:
             self.mensagens = "Combinação Errada!"
             self.dinheiro -= 10
-            self.disparar_animacao("Receita Estragada!", "erro.png", (200, 50, 50))
+            self.disparar_animacao("Combinação Inválida!", "erro.png", (200, 50, 50))
             self.bancada = []
             return "ERRO"
 
